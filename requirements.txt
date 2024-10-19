@@ -1,0 +1,4 @@
+PyQt5==5.15.6
+pynput==1.7.6
+matplotlib==3.5.2
+

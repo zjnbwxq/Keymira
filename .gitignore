@@ -1,134 +1,26 @@
-# C# and .NET ignores
-## Visual Studio files
-.vs/
-*.suo
-*.user
-*.userosscache
-*.sln.docstates
-
-## Build results
-[Dd]ebug/
-[Dd]ebugPublic/
-[Rr]elease/
-[Rr]eleases/
-x64/
-x86/
-build/
-bld/
-[Bb]in/
-[Oo]bj/
-[Oo]ut/
-msbuild.log
-msbuild.err
-msbuild.wrn
-
-## NuGet Packages
-*.nupkg
-*.snupkg
-**/[Pp]ackages/*
-!**/[Pp]ackages/build/
-*.nuget.props
-*.nuget.targets
-
-# Python ignores
-## Byte-compiled / optimized / DLL files
+# Python
 __pycache__/
 *.py[cod]
-*$py.class
+*.so
 
-## Virtual environments
+# 虚拟环境
 venv/
 env/
-ENV/
 
-## Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-## Jupyter Notebook
-.ipynb_checkpoints
-
-# IDE-specific files
-## Visual Studio Code
+# IDE
 .vscode/
-
-## JetBrains IDEs (PyCharm, Rider, etc.)
 .idea/
-*.sln.iml
 
-## Visual Studio
-*.rsuser
-*_i.c
-*_p.c
-*_h.h
-*.ilk
-*.meta
-*.obj
-*.iobj
-*.pch
-*.pdb
-*.ipdb
-*.pgc
-*.pgd
-*.rsp
-*.sbr
-*.tlb
-*.tli
-*.tlh
-*.tmp
-*.tmp_proj
-*_wpftmp.csproj
-*.log
-*.vspscc
-*.vssscc
-.builds
-*.pidb
-*.svclog
-*.scc
-
-# Operating System files
-## Windows
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-
-## macOS
+# 操作系统
 .DS_Store
-.AppleDouble
-.LSOverride
+Thumbs.db
 
-## Linux
-*~
-
-# Other common ignores
-## Backup files
-*.bak
-*.gho
-*.ori
-*.orig
-*.tmp
-
-## Log files
+# 日志
 *.log
 
-## Database files
-*.sqlite
+# 临时文件
+*.tmp
 
-## Environment variables
-.env
+# 用户数据
+user_data/
 
-# Project-specific ignores (add any specific to your project here)
