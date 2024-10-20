@@ -1,8 +1,6 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QSystemTrayIcon, QMenu, QAction, QDesktopWidget, QMainWindow
-from PyQt5.QtCore import QTimer, Qt, QSize, pyqtSlot, QObject, pyqtSignal, QPoint, QMetaObject, Q_ARG
+from PyQt5.QtCore import QTimer, Qt, QSize, pyqtSlot, QObject, pyqtSignal, QPoint
 from PyQt5.QtGui import QColor, QPainter, QPainterPath, QFont, QIcon, QPixmap, QFontDatabase
 from ui.main_window import MainWindow
 from core.keyboard_listener import KeyboardListener
@@ -13,26 +11,19 @@ import json
 from datetime import datetime
 import os
 from ui.custom_menu import CustomMenu
-from utils.config_manager import ConfigManager
-import traceback
 
 class Keymira(QObject):
-    update_stats_signal = pyqtSignal(dict)
+    update_stats_signal = pyqtSignal(str)
 
     def __init__(self):
         super().__init__()
         self.app = QApplication(sys.argv)
         self.app.setQuitOnLastWindowClosed(False)
-        
-        # 首先初始化 config_manager
-        self.config_manager = ConfigManager()
-        
         self.style_manager = StyleManager()
-        # 然后将 config_manager 传递给 DataProcessor
-        self.data_processor = DataProcessor(self.config_manager)
         self.keyboard_listener = KeyboardListener()
+        self.data_processor = DataProcessor()
+        self.main_window = None
         self.floating_window = FloatingWindow(self.style_manager)
-        self.main_window = MainWindow(self.keyboard_listener, self.style_manager)
         self.stats = {}
         self.tray_icon = None
         self.is_listening = False
@@ -41,12 +32,13 @@ class Keymira(QObject):
         self.inactive_icon = None
         self.custom_menu = CustomMenu()
         
-        self.load_settings()
         self.load_fonts()
+        
+        self.main_window = MainWindow()
+        self.main_window.show()
+
         self.setup_connections()
         self.setup_timers()
-
-        QTimer.singleShot(0, self.connect_signals)
 
     def load_fonts(self):
         font_dir = os.path.join(os.path.dirname(__file__), 'fonts')
@@ -62,12 +54,6 @@ class Keymira(QObject):
         self.keyboard_listener.clear_event.connect(self.floating_window.clear_content)
         self.keyboard_listener.key_for_stats.connect(self.on_key_for_stats)
         self.app.aboutToQuit.connect(self.save_data)
-        self.main_window.save_settings_signal.connect(self.save_settings)
-        self.custom_menu.setting_clicked.connect(self.show_settings)
-        self.custom_menu.display_clicked.connect(self.toggle_floating_window)
-        self.custom_menu.personal_clicked.connect(self.show_personal)
-        self.custom_menu.quit_clicked.connect(self.quit_app)
-        self.custom_menu.toggle_listening.connect(self.toggle_listening)
 
     def setup_timers(self):
         self.update_timer = QTimer(self)
@@ -78,31 +64,16 @@ class Keymira(QObject):
         self.save_timer.timeout.connect(self.save_data)
         self.save_timer.start(300000)
 
-    def connect_signals(self):
-        self.update_stats_signal.connect(self.main_window.safe_update_stats_display)
-
     def on_update_timer(self):
         self.update_stats()
 
     def update_stats(self):
-        stats = self.data_processor.get_key_stats()
-        self.update_stats_signal.emit(stats)
-
-    @pyqtSlot(str)
-    def process_key_and_update_stats(self, key):
-        try:
-            self.data_processor.process_key(key)
-            self.update_stats()
-        except Exception as e:
-            print(f"处理按键和更新统计时出错: {e}")
-            print(traceback.format_exc())
+        if self.stats and self.main_window:
+            self.main_window.update_stats_display(self.stats)
 
     def on_key_for_stats(self, key):
-        try:
-            QTimer.singleShot(0, lambda: self.process_key_and_update_stats(key))
-        except Exception as e:
-            print(f"处理按键统计时出错: {e}")
-            print(traceback.format_exc())
+        self.data_processor.process_key(key)
+        self.stats[key] = self.stats.get(key, 0) + 1
 
     def save_data(self):
         self.data_processor.save_data(self.stats)
@@ -115,9 +86,7 @@ class Keymira(QObject):
             self.main_window.update_stats_display({})
         print("清除数据")
 
-    def toggle_floating_window(self, visible=None):
-        if visible is None:
-            visible = not self.floating_window.isVisible()
+    def toggle_floating_window(self, visible):
         if visible:
             self.floating_window.show()
         else:
@@ -128,9 +97,7 @@ class Keymira(QObject):
         # 实现更改显示模式的逻辑
 
     def change_style(self, style_name):
-        self.style_manager.load_style(style_name)
-        self.floating_window.apply_style(self.style_manager.get_style())
-        self.save_settings()
+        self.floating_window.load_style(style_name)
 
     def quit_app(self):
         self.keyboard_listener.stop()
@@ -241,33 +208,9 @@ class Keymira(QObject):
             
             self.custom_menu.show_menu(pos)
 
-    def load_settings(self):
-        # 从 config_manager 加载设置并应用到各个组件
-        settings = self.config_manager.get('settings', {})
-        self.floating_window.update_settings(settings.get('floating_window', {}))
-        self.keyboard_listener.update_settings(settings.get('keyboard', {}))
-        self.style_manager.load_style(settings.get('style', 'default'))
-        
-    def save_settings(self):
-        # 保存当前设置到 config_manager
-        settings = {
-            'floating_window': self.floating_window.get_settings(),
-            'keyboard': self.keyboard_listener.get_settings(),
-            'style': self.style_manager.current_style
-        }
-        self.config_manager.set('settings', settings)
-        
     def run(self):
         self.setup_tray_icon()
         sys.exit(self.app.exec_())
-=======
-def main():
-    print("Keymira 启动")
->>>>>>> parent of 42d14a8 (实现基本前后端)
-=======
-def main():
-    print("Keymira 启动")
->>>>>>> parent of 42d14a8 (实现基本前后端)
 
 if __name__ == "__main__":
     main()

@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
 from pynput import keyboard
 from PyQt5.QtCore import QObject, pyqtSignal, QTimer
 import time
@@ -155,15 +153,3 @@ class KeyboardListener(QObject):
             40: 'down', 45: 'insert', 46: 'delete',
         }
         return vk_mapping.get(vk, f'special_{vk}')
-
-    def update_settings(self, settings):
-        # 更新键盘监听器的设置
-        pass
-        
-    def get_settings(self):
-        # 返回当前的设置
-        return {}
-=======
->>>>>>> parent of 42d14a8 (实现基本前后端)
-=======
->>>>>>> parent of 42d14a8 (实现基本前后端)

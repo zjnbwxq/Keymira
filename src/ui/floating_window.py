@@ -136,12 +136,3 @@ class FloatingWindow(QWidget):
     def clear_text(self):
         self.label.clear()
         self.adjust_size("")
-
-    def get_settings(self):
-        return {
-            'font_size': self.font_size,
-            'color': self.color.name(),
-            'fade_in_duration': self.fade_in_duration,
-            'fade_out_duration': self.fade_out_duration,
-            'display_delay': self.display_delay
-        }
