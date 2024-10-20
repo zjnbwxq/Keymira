@@ -120,3 +120,6 @@ class CustomMenu(QWidget):
         self.adjustSize()
         self.update()
         self.show()
+
+    def on_display_clicked(self):
+        self.display_clicked.emit(True)  # 传递 True 来显示浮动窗口

@@ -9,6 +9,7 @@ class StyleManager:
         self.styles_dir = os.path.join(os.path.expanduser('~'), '.keymira', 'styles')
         self.ensure_styles_dir()
         self.load_styles()
+        self.current_style = 'default'
 
     def ensure_styles_dir(self):
         os.makedirs(self.styles_dir, exist_ok=True)
@@ -111,3 +112,11 @@ class StyleManager:
             return style_name, None
         except Exception as e:
             return None, str(e)
+
+    def load_style(self, style_name):
+        self.current_style = style_name
+        # 加载指定的样式
+        
+    def get_style(self):
+        # 返回当前样式的设置
+        return {}

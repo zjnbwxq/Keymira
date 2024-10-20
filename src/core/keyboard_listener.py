@@ -153,3 +153,11 @@ class KeyboardListener(QObject):
             40: 'down', 45: 'insert', 46: 'delete',
         }
         return vk_mapping.get(vk, f'special_{vk}')
+
+    def update_settings(self, settings):
+        # 更新键盘监听器的设置
+        pass
+        
+    def get_settings(self):
+        # 返回当前的设置
+        return {}
