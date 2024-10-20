@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QPushButton, 
                              QHBoxLayout, QLabel, QStackedWidget, QFrame,
                              QSlider, QCheckBox, QComboBox, QLineEdit, QColorDialog, QGridLayout, QToolTip, QTabWidget)
@@ -448,3 +449,5 @@ class MainWindow(QMainWindow):
 
 
 
+=======
+>>>>>>> parent of 42d14a8 (实现基本前后端)

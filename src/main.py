@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QSystemTrayIcon, QMenu, QAction, QDesktopWidget, QMainWindow
 from PyQt5.QtCore import QTimer, Qt, QSize, pyqtSlot, QObject, pyqtSignal, QPoint, QMetaObject, Q_ARG
@@ -258,7 +259,11 @@ class Keymira(QObject):
     def run(self):
         self.setup_tray_icon()
         sys.exit(self.app.exec_())
+=======
+def main():
+    print("Keymira 启动")
+>>>>>>> parent of 42d14a8 (实现基本前后端)
 
 if __name__ == "__main__":
-    keymira = Keymira()
-    keymira.run()
+    main()
+

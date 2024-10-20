@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from pynput import keyboard
 from PyQt5.QtCore import QObject, pyqtSignal, QTimer
 import time
@@ -161,3 +162,5 @@ class KeyboardListener(QObject):
     def get_settings(self):
         # 返回当前的设置
         return {}
+=======
+>>>>>>> parent of 42d14a8 (实现基本前后端)
