@@ -1,0 +1,10 @@
+{
+  "name": "default",
+  "floating_window_color": "#FFFFFF",
+  "font_color": "#000000",
+  "font_size": 36,
+  "font_family": "Roboto-Medium.ttf",
+  "fade_in_time": 500,
+  "fade_out_time": 1500,
+  "display_time": 2000
+}

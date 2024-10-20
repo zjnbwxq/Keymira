@@ -1,16 +1,21 @@
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QPushButton, 
-                             QHBoxLayout, QLabel, QSlider, QCheckBox, QColorDialog, QGridLayout, QSpacerItem, QStackedWidget, QComboBox, QDialog, QFrame)
-from PyQt5.QtCore import Qt, QSize
+                             QHBoxLayout, QLabel, QSlider, QCheckBox, QColorDialog, QGridLayout, QSpacerItem, QStackedWidget, QComboBox, QDialog, QFrame, QFileDialog, QInputDialog, QMessageBox)
+from PyQt5.QtCore import Qt, QSize, pyqtSignal
 from PyQt5.QtGui import QFont, QColor, QPainter, QPainterPath, QIcon, QPixmap, QLinearGradient, QFontDatabase, QDesktopServices
 from PyQt5.QtCore import QUrl
 import os
-from .special_key_dialog import SpecialKeyDialog
 from .style_import_dialog import StyleImportDialog
-from .user_management_dialog import UserManagementDialog  # 更新导入语句
+from .user_management_dialog import UserManagementDialog
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    import_data_signal = pyqtSignal(str)
+    export_data_signal = pyqtSignal(str)
+    add_user_signal = pyqtSignal(str)
+    update_floating_window_signal = pyqtSignal(dict)  # 添加这行
+
+    def __init__(self, data_processor):
         super().__init__()
+        self.data_processor = data_processor
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setFixedSize(720, 916)  # 360 * 2, 458 * 2
@@ -18,6 +23,9 @@ class MainWindow(QMainWindow):
         self.load_fonts()
         self.current_page = 0
         self.stacked_widget = QStackedWidget()
+        self.current_user = "guest"
+        self.user_settings = {}
+        self.load_user_settings()
         self.setup_ui()
 
     def load_icons(self):
@@ -203,12 +211,11 @@ class MainWindow(QMainWindow):
             button.setIconSize(QSize(96, 96))
 
     def create_vision_page(self):
-        # 这里包含原来的设置页面内容（现在作为视觉界面）
         vision_widget = QWidget()
         layout = QVBoxLayout(vision_widget)
 
         # 创建显示选项
-        display_options = ["顯示普通鍵", "顯示修飾鍵", "顯示組合鍵", "顯示小鍵盤", "顯示F1~F12", "顯示特殊鍵位"]
+        display_options = ["顯示普通鍵", "顯示修飾鍵", "顯示組合鍵", "顯示小鍵盤", "顯示F1~F12"]
         options_grid = QGridLayout()
         options_grid.setVerticalSpacing(25)
         options_grid.setColumnStretch(0, 1)
@@ -218,6 +225,8 @@ class MainWindow(QMainWindow):
         for i, option in enumerate(display_options):
             label = QLabel(option)
             checkbox = QCheckBox()
+            checkbox.setChecked(self.data_processor.get_user_settings(self.data_processor.current_user).get(f"display_{option}", True))
+            checkbox.stateChanged.connect(lambda state, opt=option: self.update_display_option(opt, state))
             options_grid.addWidget(label, i // 2, (i % 2) * 2)
             options_grid.addWidget(checkbox, i // 2, (i % 2) * 2 + 1, Qt.AlignRight)
         layout.addLayout(options_grid)
@@ -231,6 +240,8 @@ class MainWindow(QMainWindow):
             slider_layout.addWidget(QLabel(option))
             slider = QSlider(Qt.Horizontal)
             slider.setFixedWidth(500)
+            slider.setValue(self.get_user_setting(f"slider_{option}", 50))
+            slider.valueChanged.connect(lambda value, opt=option: self.update_user_setting(f"slider_{opt}", value))
             slider_layout.addWidget(slider)
             layout.addLayout(slider_layout)
             layout.addSpacing(10)
@@ -248,8 +259,11 @@ class MainWindow(QMainWindow):
         for i, (option, create_button_func) in enumerate(color_options):
             label = QLabel(option)
             color_button = create_button_func()
-            color_button.clicked.connect(lambda _, btn=color_button: self.choose_color(btn))
-            checkbox = QCheckBox("懸浮窗固定" if option == "懸浮窗顏色" else "圖像模式")
+            color_button.clicked.connect(lambda _, btn=color_button, opt=option: self.choose_color(btn, opt))
+            checkbox = QCheckBox("懸浮窗固定" if option == "懸浮窗顏色" else "")
+            if option == "懸浮窗顏色":
+                checkbox.setChecked(self.data_processor.get_user_settings(self.data_processor.current_user).get("floating_window_fixed", False))
+                checkbox.stateChanged.connect(self.update_floating_window_fixed)
             color_grid.addWidget(label, i, 0)
             color_grid.addWidget(color_button, i, 1)
             color_grid.addWidget(checkbox, i, 3, Qt.AlignRight)
@@ -257,6 +271,18 @@ class MainWindow(QMainWindow):
 
         layout.addStretch(1)
         return vision_widget
+
+    def update_display_option(self, option, state):
+        settings = self.data_processor.get_user_settings(self.data_processor.current_user)
+        settings[f"display_{option}"] = state == Qt.Checked
+        self.data_processor.save_user_settings(self.data_processor.current_user, settings)
+        self.update_floating_window_signal.emit(settings)  # 发射信号
+
+    def update_floating_window_fixed(self, state):
+        settings = self.data_processor.get_user_settings(self.data_processor.current_user)
+        settings["floating_window_fixed"] = state == Qt.Checked
+        self.data_processor.save_user_settings(self.data_processor.current_user, settings)
+        self.update_floating_window_signal.emit(settings)  # 发射信号
 
     def create_settings_page(self):
         settings_widget = QWidget()
@@ -274,16 +300,6 @@ class MainWindow(QMainWindow):
         start_listening_checkbox = QCheckBox()
         auto_start_layout.addWidget(start_listening_checkbox)
         layout.addLayout(auto_start_layout)
-
-        # 特殊键位
-        special_key_layout = QHBoxLayout()
-        special_key_layout.addWidget(QLabel("特殊鍵位"))
-        special_key_layout.addStretch()
-        bind_key_button = QPushButton("綁定新鍵位")
-        bind_key_button.setFixedSize(200, 40)
-        bind_key_button.clicked.connect(self.open_special_key_dialog)
-        special_key_layout.addWidget(bind_key_button)
-        layout.addLayout(special_key_layout)
 
         # 主题样式
         layout.addWidget(self.create_combo_box("主題樣式", ["Default", "Dark", "Light"]))
@@ -329,26 +345,26 @@ class MainWindow(QMainWindow):
         layout.setSpacing(20)
         layout.setContentsMargins(30, 30, 30, 30)
 
-        # 用户管理按钮
-        user_management_button = QPushButton("用户管理")
-        user_management_button.setFont(QFont("Noto Sans TC Regular", 14))
-        user_management_button.setFixedSize(150, 40)
-        user_management_button.clicked.connect(self.open_user_management)
-        layout.addWidget(user_management_button, alignment=Qt.AlignRight)
-
         # 用户选择
         user_layout = QHBoxLayout()
         user_label = QLabel("用户")
-        user_label.setFont(QFont("Noto Sans TC Regular", 16))
+        user_label.setFont(QFont("Noto Sans TC Regular", 10))  # 减小字体
         user_layout.addWidget(user_label)
 
         self.user_combo = QComboBox()
-        self.user_combo.setFont(QFont("Noto Sans TC Regular", 14))
-        self.user_combo.setFixedSize(300, 40)
-        self.user_combo.addItem("新增用户")
+        self.user_combo.setFont(QFont("Noto Sans TC Regular", 9))  # 减小字体
+        self.user_combo.setFixedSize(300, 40)  # 保持原始大小
+        self.user_combo.addItem("guest")
         self.update_user_list()
         self.user_combo.currentIndexChanged.connect(self.on_user_selected)
         user_layout.addWidget(self.user_combo)
+
+        # 用户理钮
+        user_management_button = QPushButton("用户管理")
+        user_management_button.setFont(QFont("Noto Sans TC Regular", 9))  # 减小字体
+        user_management_button.setFixedSize(150, 40)  # 保持原始大小
+        user_management_button.clicked.connect(self.open_user_management)
+        user_layout.addWidget(user_management_button)
         user_layout.addStretch()
 
         layout.addLayout(user_layout)
@@ -356,13 +372,13 @@ class MainWindow(QMainWindow):
         # 统计信息
         stats_layout = QHBoxLayout()
         stats_label = QLabel("统计信息")
-        stats_label.setFont(QFont("Noto Sans TC Regular", 16))
+        stats_label.setFont(QFont("Noto Sans TC Regular", 10))  # 减小字体
         stats_layout.addWidget(stats_label)
 
         self.stats_combo = QComboBox()
-        self.stats_combo.setFont(QFont("Noto Sans TC Regular", 14))
+        self.stats_combo.setFont(QFont("Noto Sans TC Regular", 9))
         self.stats_combo.setFixedSize(300, 40)
-        self.stats_combo.addItems(["热力图", "柱状图", "折线图"])
+        self.stats_combo.addItems(["热力图", "纯文字数据"])  # 只保留这两个选项
         stats_layout.addWidget(self.stats_combo)
         stats_layout.addStretch()
 
@@ -371,7 +387,7 @@ class MainWindow(QMainWindow):
         # 图表显示区域
         chart_frame = QFrame()
         chart_frame.setFrameShape(QFrame.StyledPanel)
-        chart_frame.setFixedSize(640, 360)
+        chart_frame.setFixedSize(640, 360)  # 保持原始大小
         layout.addWidget(chart_frame, alignment=Qt.AlignCenter)
 
         # 按钮
@@ -379,8 +395,8 @@ class MainWindow(QMainWindow):
         import_button = QPushButton("历史信息导入")
         export_button = QPushButton("导出")
         for button in [import_button, export_button]:
-            button.setFont(QFont("Noto Sans TC Regular", 14))
-            button.setFixedSize(150, 40)
+            button.setFont(QFont("Noto Sans TC Regular", 9))  # 减小字体
+            button.setFixedSize(200, 40)  # 保持原始大小
         button_layout.addWidget(import_button)
         button_layout.addWidget(export_button)
         button_layout.addStretch()
@@ -388,28 +404,43 @@ class MainWindow(QMainWindow):
         layout.addLayout(button_layout)
         layout.addStretch()
 
+        # 修改导入和导出按钮的连接
+        import_button.clicked.connect(self.import_data)
+        export_button.clicked.connect(self.export_data)
+
         return user_widget
 
     def update_user_list(self):
-        # 从某个地方获取用户列表，可能是从文件或数据库
-        # 暂时使用示例数据
-        users = ["User1", "User2", "User3"]
+        current_user = self.user_combo.currentText()
         self.user_combo.clear()
-        self.user_combo.addItem("新增用户")
+        self.user_combo.addItem("guest")
+        users = self.data_processor.get_user_list()
         self.user_combo.addItems(users)
+        self.user_combo.addItem("新增用户")
+        if current_user in users or current_user == "guest":
+            self.user_combo.setCurrentText(current_user)
+        else:
+            self.user_combo.setCurrentText("guest")
 
     def on_user_selected(self, index):
         if self.user_combo.currentText() == "新增用户":
-            dialog = UserManagementDialog(self)  # 使用新的类名
-            if dialog.exec_() == QDialog.Accepted:
-                new_users = dialog.get_users()  # 获取所有用户，而不是单个用户
-                # 这里应该保存新用户数据
-                print(f"Updated users: {new_users}")
-                self.update_user_list()
+            self.open_user_management()
         else:
-            # 处理选择已有用户的逻辑
             selected_user = self.user_combo.currentText()
-            print(f"Selected user: {selected_user}")
+            self.data_processor.set_current_user(selected_user)
+            self.update_stats_display(self.data_processor.get_key_stats())
+
+    def open_user_management(self):
+        dialog = UserManagementDialog(self.data_processor, self)
+        dialog.user_added.connect(self.on_user_added)
+        dialog.user_removed.connect(self.update_user_list)
+        if dialog.exec_() == QDialog.Accepted:
+            self.update_user_list()
+
+    def on_user_added(self, username):
+        self.update_user_list()
+        self.user_combo.setCurrentText(username)
+        self.update_stats_display(self.data_processor.get_key_stats())
 
     def create_gradient_button(self):
         button = QPushButton()
@@ -427,10 +458,14 @@ class MainWindow(QMainWindow):
         """)
         return button
 
-    def choose_color(self, button):
+    def choose_color(self, button, option):
         color = QColorDialog.getColor()
         if color.isValid():
-            button.setStyleSheet(f"background-color: {color.name()}; border-radius: 30px;")
+            button.setStyleSheet(f"background-color: {color.name()};")
+            settings = self.data_processor.get_user_settings(self.data_processor.current_user)
+            settings[f"color_{option}"] = color.name()
+            self.data_processor.save_user_settings(self.data_processor.current_user, settings)
+            self.update_floating_window_signal.emit(settings)  # 发射信号
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -443,8 +478,14 @@ class MainWindow(QMainWindow):
         painter.fillPath(path, QColor("#D9D9D9"))
 
     def update_stats_display(self, stats):
-        # 更新统计信息显示的逻辑
-        pass  # 根据需要实现具体的更新逻辑
+        # 根据选择的统计类型（热力图或纯文字数据）更新显示
+        selected_type = self.stats_combo.currentText()
+        if selected_type == "热力图":
+            # 实现热力图显示逻辑
+            pass
+        elif selected_type == "纯文字数据":
+            # 实现纯文字数据显示逻辑
+            pass
 
     def create_combo_box(self, label_text, items):
         widget = QWidget()
@@ -496,20 +537,6 @@ class MainWindow(QMainWindow):
 
         return widget
 
-    def open_special_key_dialog(self):
-        dialog = SpecialKeyDialog(self)
-        if dialog.exec_() == QDialog.Accepted:
-            # 处理用户在对话框中的输入
-            special_keys = []
-            for row in range(dialog.table.rowCount()):
-                key = dialog.table.item(row, 0).text()
-                display_name = dialog.table.item(row, 1).text()
-                note = dialog.table.item(row, 2).text()
-                special_keys.append((key, display_name, note))
-            
-            # 这里可以添加保存特殊键位数据的逻辑
-            print("Special keys:", special_keys)
-
     def open_user_manual(self):
         user_manual_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "doc", "User Manual.md")
         QDesktopServices.openUrl(QUrl.fromLocalFile(user_manual_path))
@@ -521,12 +548,51 @@ class MainWindow(QMainWindow):
             # 这里可以添加处理导入样式的逻辑
             print("Imported style data:", style_data)
 
-    def open_user_management(self):
-        dialog = UserManagementDialog(self)
-        if dialog.exec_() == QDialog.Accepted:
-            users = dialog.get_users()
-            # 更新用户列表或进行其他操作
-            print(f"Updated users: {users}")
+    def import_data(self):
+        file_path, _ = QFileDialog.getOpenFileName(self, "导入数据", "", "JSON Files (*.json)")
+        if file_path:
+            self.data_processor.import_data(file_path)
+            self.update_stats_display(self.data_processor.get_key_stats())
+
+    def export_data(self):
+        file_path, _ = QFileDialog.getSaveFileName(self, "导出数据", "", "JSON Files (*.json)")
+        if file_path:
+            self.data_processor.export_data(file_path)
+            QMessageBox.information(self, "成功", "数据已成功导出")
+
+    def load_user_settings(self):
+        # 从数据处理器加载用户设置
+        self.user_settings = self.data_processor.get_user_settings(self.current_user)
+
+    def save_user_settings(self):
+        # 保存用户设置到数据处理器
+        self.data_processor.save_user_settings(self.current_user, self.user_settings)
+
+    def get_user_setting(self, key, default_value):
+        return self.user_settings.get(key, default_value)
+
+    def update_user_setting(self, key, value):
+        self.user_settings[key] = value
+        self.save_user_settings()
+
+    def on_user_changed(self, username):
+        self.current_user = username
+        self.load_user_settings()
+        self.update_vision_page()
+
+    def update_vision_page(self):
+        # 重新创建视觉页面以反映新的用户设置
+        vision_page_index = self.stacked_widget.indexOf(self.vision_page)
+        self.stacked_widget.removeWidget(self.vision_page)
+        self.vision_page = self.create_vision_page()
+        self.stacked_widget.insertWidget(vision_page_index, self.vision_page)
+
+
+
+
+
+
+
 
 
 

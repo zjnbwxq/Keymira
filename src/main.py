@@ -1,6 +1,6 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QSystemTrayIcon, QMenu, QAction, QDesktopWidget, QMainWindow
-from PyQt5.QtCore import QTimer, Qt, QSize, pyqtSlot, QObject, pyqtSignal, QPoint, QMetaObject
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QSystemTrayIcon, QMenu, QAction, QDesktopWidget, QMainWindow, QMessageBox, QFileDialog, QInputDialog, QDialog
+from PyQt5.QtCore import QTimer, Qt, QSize, pyqtSlot, QObject, pyqtSignal, QPoint, QMetaObject, QMetaType
 from PyQt5.QtGui import QColor, QPainter, QPainterPath, QFont, QIcon, QPixmap, QFontDatabase
 from ui.main_window import MainWindow
 from core.keyboard_listener import KeyboardListener
@@ -11,6 +11,7 @@ import json
 from datetime import datetime
 import os
 from ui.custom_menu import CustomMenu
+
 
 class Keymira(QObject):
     update_stats_signal = pyqtSignal()
@@ -34,7 +35,7 @@ class Keymira(QObject):
         
         self.load_fonts()
         
-        self.main_window = MainWindow()
+        self.main_window = MainWindow(self.data_processor)
         self.main_window.show()
 
         self.setup_connections()
@@ -47,7 +48,11 @@ class Keymira(QObject):
         for font_file in ['NotoSansTC-Bold.ttf', 'NotoSansTC-Regular.ttf']:
             font_path = os.path.join(font_dir, font_file)
             if os.path.exists(font_path):
-                QFontDatabase.addApplicationFont(font_path)
+                font_id = QFontDatabase.addApplicationFont(font_path)
+                if font_id != -1:
+                    font_families = QFontDatabase.applicationFontFamilies(font_id)
+                    if font_families:
+                        self.data_processor.add_font(font_families[0])
             else:
                 print(f"警告：字体文件 {font_file} 不存在")
 
@@ -56,6 +61,10 @@ class Keymira(QObject):
         self.keyboard_listener.clear_event.connect(self.floating_window.clear_content)
         self.keyboard_listener.key_for_stats.connect(self.on_key_for_stats)
         self.app.aboutToQuit.connect(self.save_data)
+        self.main_window.import_data_signal.connect(self.data_processor.import_data)
+        self.main_window.export_data_signal.connect(self.data_processor.export_data)
+        self.main_window.add_user_signal.connect(self.add_user)
+        self.main_window.update_floating_window_signal.connect(self.update_floating_window_settings)
 
     def setup_timers(self):
         self.update_timer = QTimer(self)
@@ -70,20 +79,23 @@ class Keymira(QObject):
         self.update_stats_signal.emit()
 
     def update_stats(self):
-        if self.stats and self.main_window:
-            self.main_window.update_stats_display(self.stats)
+        if self.main_window:
+            self.main_window.update_stats_display(self.data_processor.get_key_stats())
 
     def on_key_for_stats(self, key):
         self.data_processor.process_key(key)
-        self.stats[key] = self.stats.get(key, 0) + 1
+        self.update_stats_signal.emit()
 
     def save_data(self):
-        self.data_processor.save_data(self.stats)
+        # 如果 self.stats 是一个包含两个元素的元组或列表
+        stats, additional_data = self.stats
+        self.data_processor.save_data(stats)
+        # 或者如果只需要保存 stats 中的第一个元素
+        # self.data_processor.save_data(self.stats[0])
         print("数据已保存")
 
     def clear_data(self):
         self.data_processor.clear_data()
-        self.stats.clear()
         if self.main_window:
             self.main_window.update_stats_display({})
         print("清除数据")
@@ -100,11 +112,14 @@ class Keymira(QObject):
 
     def change_style(self, style_name):
         self.floating_window.load_style(style_name)
+        self.data_processor.add_style(style_name)
 
     def quit_app(self):
         self.keyboard_listener.stop()
         if self.tray_icon:
             self.tray_icon.hide()
+        if self.data_processor.current_user == "guest":
+            self.data_processor.cleanup_guest_data()
         self.app.quit()
 
     def setup_tray_icon(self):
@@ -147,7 +162,7 @@ class Keymira(QObject):
 
     def show_settings(self):
         if not self.main_window:
-            self.main_window = MainWindow(self.keyboard_listener, self.style_manager)
+            self.main_window = MainWindow(self.data_processor)
             self.main_window.start_listening_signal.connect(self.keyboard_listener.start)
             self.main_window.stop_listening_signal.connect(self.keyboard_listener.stop)
             self.main_window.clear_data_signal.connect(self.clear_data)
@@ -213,6 +228,22 @@ class Keymira(QObject):
     def run(self):
         self.setup_tray_icon()
         sys.exit(self.app.exec_())
+
+    def add_user(self, username):
+        if self.data_processor.add_user(username):
+            self.main_window.update_user_list()
+            self.main_window.user_combo.setCurrentText(username)
+            self.main_window.update_stats_display(self.data_processor.get_key_stats())
+        else:
+            QMessageBox.warning(self.main_window, "错误", "用户名已存在或无效")
+
+    def update_floating_window_settings(self, settings):
+        self.floating_window.update_settings(settings)
+        if settings.get("floating_window_fixed", False):
+            self.floating_window.setWindowFlags(self.floating_window.windowFlags() | Qt.WindowStaysOnTopHint)
+        else:
+            self.floating_window.setWindowFlags(self.floating_window.windowFlags() & ~Qt.WindowStaysOnTopHint)
+        self.floating_window.show()
 
 if __name__ == "__main__":
     keymira = Keymira()

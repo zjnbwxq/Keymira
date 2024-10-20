@@ -19,6 +19,7 @@ class KeyboardListener(QObject):
         self.clear_timer = QTimer()
         self.clear_timer.setSingleShot(True)
         self.clear_timer.timeout.connect(self.clear_display)
+        self.display_settings = {}
 
     def load_settings(self):
         try:
@@ -45,6 +46,9 @@ class KeyboardListener(QObject):
         self.settings['max_consecutive_chars'] = value
         self.save_settings()
 
+    def update_display_settings(self, settings):
+        self.display_settings = {k: v for k, v in settings.items() if k.startswith("display_")}
+
     def on_press(self, key):
         current_time = time.time()
         key_char = self.normalize_key(key)
@@ -70,6 +74,9 @@ class KeyboardListener(QObject):
             
             print(f"发送键字符串: {key_string}")  # 调试信息
             self.key_event.emit(key_string)
+        
+        # 总是发送统计事件
+        self.key_for_stats.emit(key_char)
 
         # 重置计时器
         self.clear_timer.start(1500)
@@ -119,6 +126,16 @@ class KeyboardListener(QObject):
                 return 'fn'
             return self.vk_to_char(key.vk if key.vk else ord(key.char))
         return str(key).lower()
+
+    def should_display_key(self, key):
+        if key in {'ctrl', 'alt', 'shift', 'win', 'fn'}:
+            return self.display_settings.get("display_顯示修飾鍵", True)
+        elif key.startswith('f') and key[1:].isdigit():
+            return self.display_settings.get("display_顯示F1~F12", True)
+        elif key in {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '-', '*', '/', 'enter', 'num_lock'}:
+            return self.display_settings.get("display_顯示小鍵盤", True)
+        else:
+            return self.display_settings.get("display_顯示普通鍵", True)
 
     def start(self):
         if not self.listener:
