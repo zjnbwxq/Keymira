@@ -1,6 +1,6 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QSystemTrayIcon, QMenu, QAction, QDesktopWidget, QMainWindow
-from PyQt5.QtCore import QTimer, Qt, QSize, pyqtSlot, QObject, pyqtSignal, QPoint
+from PyQt5.QtCore import QTimer, Qt, QSize, pyqtSlot, QObject, pyqtSignal, QPoint, QMetaObject
 from PyQt5.QtGui import QColor, QPainter, QPainterPath, QFont, QIcon, QPixmap, QFontDatabase
 from ui.main_window import MainWindow
 from core.keyboard_listener import KeyboardListener
@@ -13,7 +13,7 @@ import os
 from ui.custom_menu import CustomMenu
 
 class Keymira(QObject):
-    update_stats_signal = pyqtSignal(str)
+    update_stats_signal = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -40,6 +40,8 @@ class Keymira(QObject):
         self.setup_connections()
         self.setup_timers()
 
+        self.update_stats_signal.connect(self.update_stats)
+
     def load_fonts(self):
         font_dir = os.path.join(os.path.dirname(__file__), 'fonts')
         for font_file in ['NotoSansTC-Bold.ttf', 'NotoSansTC-Regular.ttf']:
@@ -65,7 +67,7 @@ class Keymira(QObject):
         self.save_timer.start(300000)
 
     def on_update_timer(self):
-        self.update_stats()
+        self.update_stats_signal.emit()
 
     def update_stats(self):
         if self.stats and self.main_window:
@@ -213,5 +215,5 @@ class Keymira(QObject):
         sys.exit(self.app.exec_())
 
 if __name__ == "__main__":
-    main()
-
+    keymira = Keymira()
+    keymira.run()
