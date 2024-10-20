@@ -10,7 +10,7 @@ Keymira 是一款 Windows 平台的键盘监听与分析软件，提供实时按
 - 多用户支持
 - 详细的使用统计报告
 
-![Keymira](https://raw.githubusercontent.com/zjnbwxq/pictureLinks/master/Snipaste_2024-10-19_14-57-21.png)
+![Keymira](https://raw.githubusercontent.com/zjnbwxq/pictureLinks/master/Component%201.png)
 
 
 
