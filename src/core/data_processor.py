@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 import json
 from datetime import datetime
 import os
@@ -36,5 +37,7 @@ class DataProcessor:
         self.key_counts = {}
         if os.path.exists(self.data_file):
             os.remove(self.data_file)
+=======
+>>>>>>> parent of 42d14a8 (实现基本前后端)
 =======
 >>>>>>> parent of 42d14a8 (实现基本前后端)
