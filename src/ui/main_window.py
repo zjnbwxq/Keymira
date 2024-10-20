@@ -1,11 +1,12 @@
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QPushButton, 
-                             QHBoxLayout, QLabel, QSlider, QCheckBox, QColorDialog, QGridLayout, QSpacerItem, QStackedWidget, QComboBox, QDialog)
+                             QHBoxLayout, QLabel, QSlider, QCheckBox, QColorDialog, QGridLayout, QSpacerItem, QStackedWidget, QComboBox, QDialog, QFrame)
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QFont, QColor, QPainter, QPainterPath, QIcon, QPixmap, QLinearGradient, QFontDatabase, QDesktopServices
 from PyQt5.QtCore import QUrl
 import os
 from .special_key_dialog import SpecialKeyDialog
 from .style_import_dialog import StyleImportDialog
+from .user_management_dialog import UserManagementDialog  # 更新导入语句
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -294,7 +295,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.create_combo_box("字體樣式", ["Default", "Sans-serif", "Serif", "Monospace"]))
 
         # 样式导入按钮
-        import_style_button = QPushButton("样式导入")
+        import_style_button = QPushButton("样导入")
         import_style_button.setFixedSize(120, 40)
         import_style_button.clicked.connect(self.open_style_import_dialog)
         layout.addWidget(import_style_button, alignment=Qt.AlignRight)
@@ -323,11 +324,92 @@ class MainWindow(QMainWindow):
         return settings_widget
 
     def create_user_page(self):
-        # 创建用户页面
         user_widget = QWidget()
         layout = QVBoxLayout(user_widget)
-        layout.addWidget(QLabel("用頁面"))
+        layout.setSpacing(20)
+        layout.setContentsMargins(30, 30, 30, 30)
+
+        # 用户管理按钮
+        user_management_button = QPushButton("用户管理")
+        user_management_button.setFont(QFont("Noto Sans TC Regular", 14))
+        user_management_button.setFixedSize(150, 40)
+        user_management_button.clicked.connect(self.open_user_management)
+        layout.addWidget(user_management_button, alignment=Qt.AlignRight)
+
+        # 用户选择
+        user_layout = QHBoxLayout()
+        user_label = QLabel("用户")
+        user_label.setFont(QFont("Noto Sans TC Regular", 16))
+        user_layout.addWidget(user_label)
+
+        self.user_combo = QComboBox()
+        self.user_combo.setFont(QFont("Noto Sans TC Regular", 14))
+        self.user_combo.setFixedSize(300, 40)
+        self.user_combo.addItem("新增用户")
+        self.update_user_list()
+        self.user_combo.currentIndexChanged.connect(self.on_user_selected)
+        user_layout.addWidget(self.user_combo)
+        user_layout.addStretch()
+
+        layout.addLayout(user_layout)
+
+        # 统计信息
+        stats_layout = QHBoxLayout()
+        stats_label = QLabel("统计信息")
+        stats_label.setFont(QFont("Noto Sans TC Regular", 16))
+        stats_layout.addWidget(stats_label)
+
+        self.stats_combo = QComboBox()
+        self.stats_combo.setFont(QFont("Noto Sans TC Regular", 14))
+        self.stats_combo.setFixedSize(300, 40)
+        self.stats_combo.addItems(["热力图", "柱状图", "折线图"])
+        stats_layout.addWidget(self.stats_combo)
+        stats_layout.addStretch()
+
+        layout.addLayout(stats_layout)
+
+        # 图表显示区域
+        chart_frame = QFrame()
+        chart_frame.setFrameShape(QFrame.StyledPanel)
+        chart_frame.setFixedSize(640, 360)
+        layout.addWidget(chart_frame, alignment=Qt.AlignCenter)
+
+        # 按钮
+        button_layout = QHBoxLayout()
+        import_button = QPushButton("历史信息导入")
+        export_button = QPushButton("导出")
+        for button in [import_button, export_button]:
+            button.setFont(QFont("Noto Sans TC Regular", 14))
+            button.setFixedSize(150, 40)
+        button_layout.addWidget(import_button)
+        button_layout.addWidget(export_button)
+        button_layout.addStretch()
+
+        layout.addLayout(button_layout)
+        layout.addStretch()
+
         return user_widget
+
+    def update_user_list(self):
+        # 从某个地方获取用户列表，可能是从文件或数据库
+        # 暂时使用示例数据
+        users = ["User1", "User2", "User3"]
+        self.user_combo.clear()
+        self.user_combo.addItem("新增用户")
+        self.user_combo.addItems(users)
+
+    def on_user_selected(self, index):
+        if self.user_combo.currentText() == "新增用户":
+            dialog = UserManagementDialog(self)  # 使用新的类名
+            if dialog.exec_() == QDialog.Accepted:
+                new_users = dialog.get_users()  # 获取所有用户，而不是单个用户
+                # 这里应该保存新用户数据
+                print(f"Updated users: {new_users}")
+                self.update_user_list()
+        else:
+            # 处理选择已有用户的逻辑
+            selected_user = self.user_combo.currentText()
+            print(f"Selected user: {selected_user}")
 
     def create_gradient_button(self):
         button = QPushButton()
@@ -438,6 +520,16 @@ class MainWindow(QMainWindow):
             style_data = dialog.get_style_data()
             # 这里可以添加处理导入样式的逻辑
             print("Imported style data:", style_data)
+
+    def open_user_management(self):
+        dialog = UserManagementDialog(self)
+        if dialog.exec_() == QDialog.Accepted:
+            users = dialog.get_users()
+            # 更新用户列表或进行其他操作
+            print(f"Updated users: {users}")
+
+
+
 
 
 

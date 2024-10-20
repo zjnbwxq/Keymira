@@ -58,7 +58,7 @@ class StyleImportDialog(QDialog):
         # Logo
         logo_label = QLabel()
         logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "logo.png")
-        logo_pixmap = QPixmap(logo_path).scaled(200, 200, Qt.KeepAspectRatio, Qt.SmoothTransformation)  # 增加logo大小
+        logo_pixmap = QPixmap(logo_path).scaled(100, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation)  # 增加logo大小
         logo_label.setPixmap(logo_pixmap)
         layout.addWidget(logo_label, alignment=Qt.AlignCenter)
 
